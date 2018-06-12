@@ -1,4 +1,4 @@
-from blocks import *
+from .blocks import *
 from torch.autograd import Variable
 from torch import optim
 import torchvision
