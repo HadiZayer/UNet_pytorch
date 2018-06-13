@@ -38,9 +38,9 @@ def train(model, images, labels, batch_size, epochs, lr=0.1, gpu=False):
             
             epoch_loss += loss
             print(loss)
-            iters += 1
-            if(iters == 5):
-                break
+            # iters += 1
+            # if(iters == 5):
+            #     break
         # gc.collect()
         # del x, pred_masks
         
