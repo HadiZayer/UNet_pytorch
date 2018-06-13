@@ -30,7 +30,7 @@ test = test.unsqueeze(1)
 model = unet(1,2)
 model.load_state_dict(torch.load('saved_model_state.pt'))
 
-train.train(model, imgs, labels, batch_size=1, epochs=1)
+train.train(model, imgs, labels, batch_size=1, epochs=1, lr=0.03)
 torch.save(model.state_dict(), 'saved_model_state.pt')
 
 testimg = test[20]
