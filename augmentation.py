@@ -1,4 +1,5 @@
 from torchvision import transforms
+import torch
 import random
 
 """
@@ -44,4 +45,8 @@ def augment_data(input_img, label, rotationNum=5, cropNum=5, hflip=True, vflip=T
                 
             modified_inputs.append(transforms.ToTensor()(modified_input))
             modified_labels.append(transforms.ToTensor()(modified_label))
+
+    modified_inputs = torch.stack(modified_inputs)
+    modified_labels = torch.stack(modified_labels)
+
     return modified_inputs, modified_labels
