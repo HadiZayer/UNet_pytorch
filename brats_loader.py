@@ -3,7 +3,7 @@ import numpy as np
 import nibabel as nib
 
 
-def load_BRATS_data(path):
+def load_data(path):
     t1 = []
     t1gd = []
     t2 = []
@@ -20,7 +20,7 @@ def load_BRATS_data(path):
                 t2.append(nib.load(filepath).get_fdata())
             elif(file.endswith('flair.nii.gz')):
                 flair.append(nib.load(filepath).get_fdata())
-            elif(file.endswith('GlistrBoost_ManuallyCorrected.nii.gz')):
+            elif(file.endswith('GlistrBoost.nii.gz')):
                 labels.append(nib.load(filepath).get_fdata())
 
     return t1, t1gd, t2, flair, labels
@@ -51,7 +51,20 @@ def mode(array):
 in-place data processing
 It subtracts the mode of the data, and normalize standard deviation to 1
 """
-def preprocess(data):
-	epsilon = 1e-6
-	data -= mode(data)
-	data = data / (data.std + epsilon)
+def preprocess_mode(data):
+    epsilon = 1e-6
+    data -= mode(data)
+    data = data / (data.std() + epsilon)
+    return data
+
+def preprocess_mean(data):
+    epsilon = 1e-6
+    data -= data.mean()
+    data = data / (data.std() + epsilon)
+    return data
+
+def preprocess_map_to_one(data):
+    epsilon = 1e-6
+    data -= data.mean()
+    data /= max(abs(data.min()), data.max())
+    return data

@@ -3,8 +3,11 @@ from torch.utils.data import TensorDataset, DataLoader
 from torch import optim
 from torch.autograd import Variable
 from torch import nn
-import loss
 from augmentation import augment_data
+import numpy as np
+import torchvision
+from loss import MulticlassDiceLoss
+
 
 def oneHotEncoding(labels, num_classes):
     N, H, W = labels.size()
@@ -12,56 +15,53 @@ def oneHotEncoding(labels, num_classes):
     output = output.scatter_(1, labels.unsqueeze(1).long(), 1)
     return output
 
-def train(model, images, labels, batch_size, epochs, lr=0.1, gpu=False):
+def train(model, images, labels, batch_size, epochs, num_classes, lr=0.1, gpu=True):
     
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)
-    criterion = loss.MulticlassDiceLoss()
-    
+    oneHotLabels = oneHotEncoding(labels, num_classes)
+
     if(gpu):
         model.cuda()
         images = images.cuda()
-        labels = labels.cuda()
+        oneHotLabels = oneHotLabels.cuda()
 
-    dataset = torch.utils.data.TensorDataset(images, labels)
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-3)
+    criterion = MulticlassDiceLoss()
+    mse = nn.MSELoss()
+
+
+    dataset = torch.utils.data.TensorDataset(images, oneHotLabels)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
     
     iters = 0
 
+
     for epoch in range(epochs):
         epoch_loss = 0
         for batch, target in dataloader:
-            for b,t in zip(batch, target):
-                t3 = torch.stack([t,t,t])
-                augmented_b, augmented_t = augment_data(b, t3, rotationNum=1, cropNum=1, hflip=True, vflip=True)
-                augmented_t = augmented_t[:,0,:,:]
 
-                augmented_t = oneHotEncoding(augmented_t, 2)
-
-                batch_var = Variable(augmented_b)
-                target_var = Variable(augmented_t)
+            if(len(target[:,1:].nonzero()) == 0):
+                continue
 
 
-
-        # x = Variable(torch.FloatTensor(np.random.random((2, 1, 256, 256))))
+            batch_var = Variable(batch)
             
-        
-                prediction = model(batch_var)
-                sigmoid = nn.Sigmoid()
-                prediction = sigmoid(prediction)
-                diceloss = criterion(prediction, target_var)
-                # bce = nn.BCELoss()
-                # loss += bce(prediction, target_var)
-                optimizer.zero_grad()
-                diceloss.backward()
-                optimizer.step()
-            
-                epoch_loss += diceloss
-                print(diceloss)
+            target_var = Variable(target)
 
-            # iters += 1
-            # if(iters == 2):
-            #     break
-        # gc.collect()
-        # del x, pred_masks
+    
+            prediction = model(batch_var)
+            softmax = nn.Softmax2d()
+            soft_prediction = softmax(prediction)
+
+            diceLoss = criterion(soft_prediction, target_var, ignore_indices=[0])
+
+
+            loss = diceLoss
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
         
-        print('Epoch {}, loss: {}'.format(epoch, epoch_loss))
+            epoch_loss += loss
+
+        
+        print('loss: {}'.format(epoch_loss))

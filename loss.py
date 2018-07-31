@@ -7,15 +7,16 @@ class DiceLoss(nn.Module):
 
 	def	forward(self, input, target):
 		N = target.size(0)
-		smooth = 1
+		smooth = 1e-8
 
 		input_flat = input.view(N, -1)
 		target_flat = target.view(N, -1)
 
 		intersection = input_flat * target_flat
 
-		loss = 2 * (intersection.sum(1) + smooth) / (input_flat.sum(1) + target_flat.sum(1) + smooth)
-		loss = 1 - loss.sum() / N
+
+		loss =  (2 * intersection.sum(1) + smooth) / (input_flat.sum(1) + target_flat.sum(1) + smooth)
+		loss = -loss.sum() / N
 
 		return loss
 
@@ -28,7 +29,7 @@ class MulticlassDiceLoss(nn.Module):
 	def __init__(self):
 		super(MulticlassDiceLoss, self).__init__()
 
-	def forward(self, input, target, weights=None):
+	def forward(self, input, target, weights=None, ignore_indices=[]):
 
 		C = target.shape[1]
 
@@ -39,10 +40,16 @@ class MulticlassDiceLoss(nn.Module):
 		totalLoss = 0
 
 		for i in range(C):
+			if i in ignore_indices:
+				continue
 			diceLoss = dice(input[:,i], target[:,i])
+
 			if weights is not None:
 				diceLoss *= weights[i]
+
 			totalLoss += diceLoss
+
+		totalLoss /= (C-len(set(ignore_indices)))
 
 		return totalLoss
 
